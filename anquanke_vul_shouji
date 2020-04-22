@@ -1,0 +1,380 @@
+#下次版本：
+#1.多线程
+#2.输出到excel中
+
+import requests
+import datetime
+from bs4 import BeautifulSoup
+import bs4
+import re
+import string
+from tkinter import messagebox
+import xlwt
+
+def sheet_write(sheet,hang,lie,what_text):
+    if lie == 0:
+        sheet.write(hang, 0, what_text)
+    elif lie == 1:
+        sheet.write(hang, 1, what_text)
+    elif lie == 2:
+        sheet.write(hang, 2, what_text)
+    elif lie == 3:
+        sheet.write(hang, 3, what_text)
+    elif lie == 4:
+        sheet.write(hang, 4, what_text)
+    elif lie == 5:
+        sheet.write(hang, 5, what_text)
+    elif lie == 6:
+        sheet.write(hang, 6, what_text)
+    elif lie == 7:
+        sheet.write(hang, 7, what_text)
+    elif lie == 8:
+        sheet.write(hang, 8, what_text)
+    elif lie == 9:
+        sheet.write(hang, 9, what_text)
+    else:
+        sheet.write(hang, lie, '{{出错了')
+
+def getHTMLText(url):
+    try:
+        r = requests.get(url, timeout=60)
+        r.raise_for_status()  # 如果状态不是200 引发http error异常
+        r.encoding = r.apparent_encoding
+        return r.text
+    except:
+
+        return "产生异常"
+
+def get_first_time():
+    url = "https://www.anquanke.com/vul?page=1"
+    url_html=getHTMLText(url)
+
+    soup = BeautifulSoup(url_html, 'html.parser', from_encoding='utf-8')
+    tr_bro = soup.tbody.children
+    cycle_time=1
+    for tr_child in tr_bro:
+        if type(tr_child) == bs4.element.NavigableString:
+            # print("kong")
+            # 啥都不做
+            intx = 1
+        else:
+            # 发布时间|更新时间
+            cve_time = tr_child.find_all("td", {"class": "vul-date-item"})
+            # print(type(cve_time))
+            fabu_time = cve_time[0]
+            gengxin_rime = cve_time[1]
+            # print(type(fabu_time.string))  存疑问！！！！！！！！！！！！！
+            for str in fabu_time.strings:
+                time_fabu_rep = str.replace('\n', '').replace('\r', '').strip().lstrip()
+                #print(time_fabu_rep)  # 发布时间
+            for str in gengxin_rime.strings:
+                time_gengxin_rep = str.replace('\n', '').replace('\r', '').strip().lstrip()
+                #print(time_gengxin_rep)  # 更新时间
+            return time_fabu_rep, time_gengxin_rep
+
+def model_1(tr_child):
+    try:
+        try:
+            lianjie = tr_child.find("div", {"class": "vul-title-item"})
+            # 得到标题名字
+            biaodiming = (lianjie.a.string)
+            biaodiming_last = biaodiming.replace('\n', '').replace('\r', '')
+
+
+        except:
+            biaodiming_last="异常{{biaodiming_last"
+        print(biaodiming_last)
+        sheet_write(sheet, loudong_count, 0, biaodiming_last)
+        # 得到进cve的链接1
+        # https://www.anquanke.com/vul/id/1998814          /vul/id/1998818
+        try:
+            lianjie_real=(lianjie.a["href"])
+            lianjie_real="https://www.anquanke.com/"+lianjie_real
+        except:
+            lianjie_real="异常{{lianjie_real"
+        print(lianjie_real)
+        sheet_write(sheet, loudong_count, 1, lianjie_real)
+        # 得到cve号
+        try:
+            cve_num = tr_child.find("td", {"class": "vul-cve-item"})
+            cve_num_x = (cve_num.a.string)
+        except:
+            cve_num_x="异常{{cve_num_x"
+        print(cve_num_x)
+        sheet_write(sheet, loudong_count, 2, cve_num_x)
+
+        # 发布时间|更新时间=时间一般都有，所以未作异常处理
+        cve_time = tr_child.find_all("td", {"class": "vul-date-item"})
+        # print(type(cve_time))
+        fabu_time = cve_time[0]
+        gengxin_rime = cve_time[1]
+        # print(type(fabu_time.string))  存疑问！！！！！！！！！！！！！
+        for str in fabu_time.strings:
+            time_fabu_rep = str.replace('\n', '').replace('\r', '').strip().lstrip()
+            print(time_fabu_rep)  # 发布时间
+            sheet_write(sheet, loudong_count, 3, time_fabu_rep)
+        for str in gengxin_rime.strings:
+            time_gengxin_rep = str.replace('\n', '').replace('\r', '').strip().lstrip()
+            print(time_gengxin_rep)  # 更新时间
+            sheet_write(sheet, loudong_count, 4, time_gengxin_rep)
+        ##########回参
+        return (lianjie_real)
+    except:
+        print("error：mode1")
+        sheet_write(sheet, loudong_count, 3, "异常{{")
+        sheet_write(sheet, loudong_count, 4, "异常{{")
+
+        return "异常"
+
+def model_2(soupx):
+    #/html/body/main/div/div/div/div[1]
+    #soup = soupx.html.body.mian.div.div.div.div
+    try:
+        soup = soupx.body.main.div.div.div.div
+        children_all = soup.find_all("div", {"class": "common-left-content-container article-detail"})
+        try:
+            param_1 = children_all[0]
+            param_1_1 = param_1.find("td", {"class": "vul-info-value"})
+            # print("xxxxxxxx")
+            param_1_1_1 = param_1.find("a", {"style": "font-weight: bold"})
+            # 找到了过去cve的链接
+            to_cve_url=param_1_1_1["href"].replace('\n', '').replace('\r', '')
+        except:
+            to_cve_url="异常{{to_cve_url"
+        print(to_cve_url)
+        sheet_write(sheet, loudong_count, 5, to_cve_url)
+        # print("xxxxxxxx")
+
+        try:
+            param_2 = children_all[1]
+            param_2_1 = param_2.find("div")
+            # print(param_2)
+            param_2_1_1 = param_2_1.a
+            # print((type(param_2_1)))
+            # 找到了过去安全客的来源链接
+            anquanke_link=param_2_1_1["href"].replace('\n', '').replace('\r', '')
+        except:
+            anquanke_link="异常{{anquanke_link"
+        print(anquanke_link)
+        sheet_write(sheet, loudong_count, 6, anquanke_link)
+        # print("ccccccccc")
+
+        try:
+            param_3 = children_all[2]
+            param_3_1 = param_3.find("div")
+            param_3_1_1 = param_3_1
+            # 找到了中文说明
+            cn_content=param_3_1_1.string.replace('\n', '').replace('\r', '').lstrip()
+        except:
+            cn_content="异常{{cn_content"
+        sheet_write(sheet, loudong_count, 7, cn_content)
+        print(cn_content)
+
+        ##########回参
+        return to_cve_url
+    except:
+        print("error:mode2")
+
+        return "异常"
+
+def model_3(soupx):
+    try:
+        soup = soupx.find("div", {"id": "GeneratedTable"})
+
+        try:
+            # 英文说明的位置：//*[@id="GeneratedTable"]/table/tbody/tr[4]
+            cve_auth_all = soup.table.contents
+            en_content = cve_auth_all[7]
+            # 得到正确的英文说明位置：
+            en_content=(en_content.td.string.replace('\n', '').replace('\r', ''))
+        except:
+            en_content="异常{{en_content"
+        print(en_content)
+        sheet_write(sheet, loudong_count, 8, en_content)
+
+        try:
+            en_content_link = cve_auth_all[13]
+            en_content_link_li = en_content_link.find_all("li")
+            # 得到正确的英文链接位置：
+            print("-----参考链接：下-----")
+            count_resultset=1
+            resultset_list=[]
+            for li_x in en_content_link_li:
+                en_cankao_link = li_x.a.string
+                resultset_list.append(en_cankao_link)
+                resultset_list.append("\n")
+            print(resultset_list)
+            #for li_x in en_content_link_li:
+            #    en_cankao_link=li_x.a.string
+            #    print(en_cankao_link)
+
+            # print(type(en_content_link))
+            # print((en_content.td.string))
+            print("-----参考链接：终-----")
+            #asdf输出列表
+        except:
+            resultset_list="异常{{en_cankao_link"
+            print(resultset_list)
+        sheet_write(sheet, loudong_count, 9, resultset_list)
+    except:
+        print("error:mode_last")
+
+        return "异常"
+
+
+if __name__ == "__main__":
+
+
+
+    period_day=0 #1天对应0：例如，21号当天更新的，period_day=0，deal_time="2020-04-21"，前提是当天进行的扫描，应为此程序还不会中间截断某一定时间的
+    #today = datetime.datetime.today().date()
+
+    deal_time="2020-04-22"
+    deal_time_test = datetime.datetime.strptime(deal_time, '%Y-%m-%d')
+    deal_time_test=deal_time_test.date()
+    today=deal_time_test
+    print("测试时间:",today,"---------以下---------")
+
+    #exit()
+    dead_day = today + datetime.timedelta(days=-period_day)
+    #deal_time_real = datetime.datetime.strptime(deal_time, '%Y-%m-%d')
+    #str_p = datetime.datetime.strftime(deal_time_real, '%Y-%m-%d')
+    x,y=get_first_time()
+    x_time = datetime.datetime.strptime(x, '%Y-%m-%d')
+    y_time = datetime.datetime.strptime(y, '%Y-%m-%d')
+    chazhi= y_time-x_time
+    if(chazhi<=(datetime.timedelta(days=0)) ):
+        #为负数时y_time小于x_time
+        lage_day=x_time
+    else:
+        lage_day=y_time
+
+    lage_day=lage_day.date()
+
+    #======================================================================
+    #url = "https://www.anquanke.com/vul?page=1"
+    #print(getHTMLText(url))
+    count_page = 1
+    #第一页返回的时间，ok的话继续往下
+    if ((dead_day<=lage_day)):
+
+        #创建记录的excel表格
+        workbook = xlwt.Workbook()
+        sheet = workbook.add_sheet("Sheet Name1", cell_overwrite_ok=True)
+        sheet.write(0, 0, '漏洞名')
+        sheet.write(0, 1, '跳转page2安全客链接')
+        sheet.write(0, 2, 'cve号')
+        sheet.write(0, 3, '发布日期')
+        sheet.write(0, 4, '更新日期')
+        sheet.write(0, 5, '安全客去cve的链接')
+        sheet.write(0, 6, 'page2安全客-参考链接')
+        sheet.write(0, 7, 'page2安全客-中文漏洞介绍')
+        sheet.write(0, 8, 'page3cve-英文介绍')
+        sheet.write(0, 9, 'page3cve-英文参考链接')
+
+
+        #ok的话继续往下
+        #count_page = 1
+        url = "https://www.anquanke.com/vul?page="
+        loudong_count=1
+        #---------------------------------------------------------------------------------------------------------------------------
+        for i in range(20):
+
+            #xx0='%d'%count_page
+            #print(type((xx0)))
+            #url_inx = url + str(count_page)
+            url_inx = 'https://www.anquanke.com/vul?page=%s'%(count_page)
+            print(url_inx)
+            html_doc = getHTMLText(url_inx)
+
+            # 第二个时间比较功能：
+            soup = BeautifulSoup(html_doc, 'html.parser')
+            tr_bro = soup.tbody.children
+            for tr_child in tr_bro:
+                if type(tr_child) == bs4.element.NavigableString:
+                    # print("kong")
+                    # 啥都不做
+                    intx = 1
+                else:
+                    # 非空，需要处理
+                    lianjie = tr_child.find("div", {"class": "vul-title-item"})
+                    # 得到标题名字
+                    biaodiming = (lianjie.a.string)
+                    biaodiming_last = biaodiming.replace('\n', '').replace('\r', '')
+                    #print(biaodiming_last)
+                    #sheet_write(sheet, loudong_count, 0, biaodiming_last)
+
+                    # 得到进cve的链接1
+                    # https://www.anquanke.com/vul/id/1998814
+                    enter_page2_link=(lianjie.a["href"])
+                    #print(enter_page2_link)
+                    #sheet_write(sheet, loudong_count, 1, enter_page2_link)
+
+                    # 得到cve号
+                    cve_num = tr_child.find("td", {"class": "vul-cve-item"})
+                    cve_num_x = (cve_num.a.string)
+                    #print(cve_num_x)
+                    #sheet_write(sheet, loudong_count, 2, cve_num_x)
+
+                    # 发布时间|更新时间
+                    cve_time = tr_child.find_all("td", {"class": "vul-date-item"})
+                    # print(type(cve_time))
+                    fabu_time = cve_time[0]
+                    gengxin_rime = cve_time[1]
+                    # print(type(fabu_time.string))  存疑问！！！！！！！！！！！！！
+                    for str in fabu_time.strings:
+                        time_fabu_rep = str.replace('\n', '').replace('\r', '').strip().lstrip()
+                        #print(time_fabu_rep)  # 发布时间
+                        #sheet_write(sheet, loudong_count, 3, time_fabu_rep)
+                    for str in gengxin_rime.strings:
+                        time_gengxin_rep = str.replace('\n', '').replace('\r', '').strip().lstrip()
+                        #print(time_gengxin_rep)  # 更新时间
+                        #sheet_write(sheet, loudong_count, 4, time_gengxin_rep)
+                    #
+                    x_time1 = datetime.datetime.strptime(time_fabu_rep, '%Y-%m-%d')
+                    y_time1 = datetime.datetime.strptime(time_gengxin_rep, '%Y-%m-%d')
+                    chazhi1 = y_time1 - x_time1
+                    if (chazhi1 <= (datetime.timedelta(days=0))):
+                        # 为负数时y_time小于x_time
+                        lage_day1 = x_time1
+                    else:
+                        lage_day1 = y_time1
+
+                    lage_day1 = lage_day1.date()
+
+                    if(lage_day1-dead_day>=(datetime.timedelta(days=0))):
+                        print("开始=====================")
+                        #时间满足,，输出内容####################################important#########################################################
+                        page_2_url=model_1(tr_child)
+
+                        html_doc_2=getHTMLText(page_2_url)
+                        soup_2 = BeautifulSoup(html_doc_2, 'html.parser', from_encoding='utf-8')
+                        print("开始3=====================")
+                        print("开始3====xxxxxx=================")
+                        page_3_url=model_2(soup_2)
+
+
+                        html_doc_3 = getHTMLText(page_3_url)
+                        soup_3 = BeautifulSoup(html_doc_3, 'html.parser', from_encoding='utf-8')
+                        print("开始4=====================")
+                        model_3(soup_3)
+
+                        loudong_count = loudong_count + 1
+                        workbook.save('Excel_test2.xls')
+
+
+                        # #####################################################important-end#########################################################
+                    else:
+                        #时间不满足,结束输出
+                        print("============以上是所有找到的内容============")
+                        workbook.save('Excel_test2.xls')
+                        messagebox.showinfo("提示:", "done!")
+                        exit()
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------
+            count_page = count_page + 1
+
+    else:
+        print("最近没有更新！")
+        exit()
+
